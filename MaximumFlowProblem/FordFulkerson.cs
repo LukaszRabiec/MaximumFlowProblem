@@ -10,11 +10,13 @@
 
         private int _size;
         private int[,] _residualGraph;
+        private Stack<int> _extensionStack;
 
 
         public FordFulkerson(int[,] capacityMatrix)
         {
             _size = capacityMatrix.GetLength(0);
+            _extensionStack = new Stack<int>();
             InitializeNetworkAndResidual(capacityMatrix);
         }
 
@@ -37,6 +39,15 @@
             return Network;
         }
 
+        public override string ToString()
+        {
+            string output = "";
+
+
+
+            return output;
+        }
+
         private void InitializeNetworkAndResidual(int[,] capacityMatrix)
         {
             Network = new Canal[_size, _size];
@@ -55,10 +66,80 @@
         private List<Connection> FindExtensionPath()
         {
             var connections = new List<Connection>();
+            int startingVertice = 0;
+            _extensionStack.Clear();
 
+            TryToVisitVertice(startingVertice, false);
 
+            if (StackHaveElements())
+            {
+                int to = _extensionStack.Pop();
+
+                while (StackHaveElements())
+                {
+                    int from = _extensionStack.Pop();
+                    connections.Add(new Connection(from, to));
+                    to = from;
+                }
+
+                connections.Add(new Connection(startingVertice, to));
+            }
 
             return connections;
+        }
+
+        private bool TryToVisitVertice(int vertice, bool isDone)
+        {
+            for (int neighbour = 0; neighbour < _size; neighbour++)
+            {
+                if (ResidualConnectionExists(vertice, neighbour)
+                    && VerticeHasntVisited(vertice))
+                {
+                    _extensionStack.Push(vertice);
+
+
+                    if (IsntAnOutflow(neighbour))
+                    {
+                        isDone = TryToVisitVertice(neighbour, isDone);
+
+                        if (!isDone)
+                        {
+                            _extensionStack.Pop();
+                        }
+                        else
+                        {
+                            isDone = true;
+                        }
+                    }
+                }
+
+                if (isDone)
+                {
+                    break;
+                }
+            }
+
+            return isDone;
+        }
+
+        private bool ResidualConnectionExists(int vertice, int neighbour)
+        {
+            return _residualGraph[vertice, neighbour] > 0;
+        }
+
+        private bool VerticeHasntVisited(int vertice)
+        {
+            return !_extensionStack.Contains(vertice);
+        }
+
+        private bool IsntAnOutflow(int vertice)
+        {
+            return vertice != _size - 1;
+        }
+
+        private bool StackHaveElements()
+        {
+            return _extensionStack.Count > 0;
         }
 
         private bool PathDoesntExist(List<Connection> path)
