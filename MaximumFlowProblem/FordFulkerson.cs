@@ -2,6 +2,7 @@
 {
     using System.Collections.Generic;
     using System.Linq;
+    using System.Text;
     using Components;
 
     public class FordFulkerson
@@ -20,11 +21,12 @@
             InitializeNetworkAndResidual(capacityMatrix);
         }
 
-        public Canal[,] FindMaximumFlow()
+        public int FindMaximumFlow()
         {
             while (true)
             {
                 var path = FindExtensionPath();
+
                 if (PathDoesntExist(path))
                 {
                     break;
@@ -32,18 +34,41 @@
 
                 var cf = GetResidualCapacity(path);
 
-                AdjustNetworkAndResidualGraph(path, cf);
-                ReduceFlow(path);
+                foreach (var connection in path)
+                {
+                    AdjustNetworkAndResidualGraph(connection, cf);
+                    ReduceFlow(connection);
+                }
             }
 
-            return Network;
+            var maximumFlow = SumFlowFromSourceAndOutflow();
+
+            return maximumFlow;
         }
 
         public override string ToString()
         {
+            var stringBuilder = new StringBuilder();
             string output = "";
 
+            for (int vertice = 0; vertice < _size; vertice++)
+            {
+                stringBuilder.Clear();
 
+                for (int neighbour = 0; neighbour < _size; neighbour++)
+                {
+                    if (Network[vertice, neighbour].Capacity > 0)
+                    {
+                        stringBuilder.AppendFormat("{0,2}/{1,1}\t", Network[vertice, neighbour].Flow, Network[vertice, neighbour].Capacity);
+                    }
+                    else
+                    {
+                        stringBuilder.Append("--/--\t");
+                    }
+                }
+
+                output += stringBuilder + "\n";
+            }
 
             return output;
         }
@@ -57,6 +82,7 @@
             {
                 for (int neighbour = 0; neighbour < _size; neighbour++)
                 {
+                    Network[vertice, neighbour] = new Canal();
                     Network[vertice, neighbour].Capacity = capacityMatrix[vertice, neighbour];
                     _residualGraph[vertice, neighbour] = capacityMatrix[vertice, neighbour];
                 }
@@ -93,10 +119,9 @@
             for (int neighbour = 0; neighbour < _size; neighbour++)
             {
                 if (ResidualConnectionExists(vertice, neighbour)
-                    && VerticeHasntVisited(vertice))
+                    && VerticeHasntVisited(neighbour))
                 {
-                    _extensionStack.Push(vertice);
-
+                    _extensionStack.Push(neighbour);
 
                     if (IsntAnOutflow(neighbour))
                     {
@@ -106,10 +131,10 @@
                         {
                             _extensionStack.Pop();
                         }
-                        else
-                        {
-                            isDone = true;
-                        }
+                    }
+                    else
+                    {
+                        isDone = true;
                     }
                 }
 
@@ -149,44 +174,40 @@
 
         private int GetResidualCapacity(List<Connection> path)
         {
-            //TODO
             return path.Select(connection => _residualGraph[connection.From, connection.To]).Min();
         }
 
-        private void AdjustNetworkAndResidualGraph(List<Connection> path, int cf)
+        private void AdjustNetworkAndResidualGraph(Connection connection, int cf)
         {
-            foreach (var connection in path)
-            {
-                var from = connection.From;
-                var to = connection.To;
+            var from = connection.From;
+            var to = connection.To;
 
-                Network[from, to].Flow += cf;
-                _residualGraph[from, to] -= cf;
-                _residualGraph[to, from] += cf;
-            }
+            Network[from, to].Flow += cf;
+            _residualGraph[from, to] -= cf;
+            _residualGraph[to, from] += cf;
         }
 
-        private void ReduceFlow(List<Connection> path)
+        private void ReduceFlow(Connection connection)
         {
-            foreach (var connection in path)
+            if (ExistOpposedFlow(connection))
             {
-                if (ExistOpposedFlow(connection))
+                int from = connection.From;
+                int to = connection.To;
+
+                int id0 = connection.From;
+                int id1 = connection.To;
+
+                if (PrimaryFlowSmallerThanOpposed(connection))
                 {
-                    int from = connection.From;
-                    int to = connection.To;
-
-                    if (PrimaryFlowSmallerThanOpposed(connection))
-                    {
-                        from = connection.To;
-                        to = connection.From;
-                    }
-
-                    Network[from, to].Flow -= Network[to, from].Flow;
-                    Network[to, from].Flow = 0;
-
-                    _residualGraph[from, to] += Network[from, to].Flow;
-                    _residualGraph[to, from] -= Network[from, to].Flow;
+                    id0 = connection.To;
+                    id1 = connection.From;
                 }
+
+                Network[id0, id1].Flow -= Network[id1, id0].Flow;
+                Network[id1, id0].Flow = 0;
+
+                _residualGraph[id0, id1] += Network[from, to].Flow;
+                _residualGraph[id1, id0] -= Network[from, to].Flow;
             }
         }
 
@@ -198,6 +219,21 @@
         private bool PrimaryFlowSmallerThanOpposed(Connection connection)
         {
             return Network[connection.From, connection.To].Flow < Network[connection.To, connection.From].Flow;
+        }
+
+        private int SumFlowFromSourceAndOutflow()
+        {
+            var sum = 0;
+
+            for (int vertice = 0; vertice < _size; vertice++)
+            {
+                if (Network[vertice, _size - 1].Flow > 0)
+                {
+                    sum += Network[vertice, _size - 1].Flow;
+                }
+            }
+
+            return sum;
         }
     }
 }

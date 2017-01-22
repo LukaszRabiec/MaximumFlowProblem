@@ -64,6 +64,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FordFulkersonTests.cs" />
     <Compile Include="NetworkReaderTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -74,10 +75,13 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Data\CapacityMatrix2.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="Data\ReaderTest.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="Data\CapacityMatrix.json">
+    <None Include="Data\CapacityMatrix1.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="packages.config" />
